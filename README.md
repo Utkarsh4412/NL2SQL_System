@@ -160,3 +160,11 @@ docker run -p 8000:8000 --env-file .env nl2sql-clinic
 pip install -r requirements.txt && python setup_database.py && python seed_memory.py && uvicorn main:app --port 8000
 ```
 
+## Troubleshooting
+
+- If `8000` is occupied on Windows, free it and retry:
+  - `Get-NetTCPConnection -LocalPort 8000 | Select-Object -First 1 | % { Stop-Process -Id $_.OwningProcess -Force }`
+- If Groq auth fails, switch to Ollama locally:
+  - `LLM_PROVIDER=ollama`
+  - `OLLAMA_MODEL=mistral`
+
