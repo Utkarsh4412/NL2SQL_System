@@ -1,7 +1,7 @@
 .env
 __pycache__/
 *.pyc
-*.db
+!clinic.db
 venv/
 .venv/
 *.pdf
