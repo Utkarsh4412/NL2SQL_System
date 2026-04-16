@@ -1,170 +1,108 @@
 # NL2SQL Clinic API
 
-An AI-powered Natural Language to SQL system for a small clinic dataset. Ask a question in plain English, the system generates SQL, validates it for safety, executes it against SQLite, and returns structured JSON with optional Plotly chart payload.
+An AI-powered Natural Language to SQL system for a clinic dataset.
 
-Built with Python 3.11, FastAPI, Vanna 2.0, SQLite, Plotly, and a small set of production-oriented bonuses (validation, caching, rate limiting, structured logging).
+**LLM Provider: Ollama (Mistral)**
 
-## Architecture overview
+## Reviewer Setup (Ollama Required)
 
-```
-Client question
-  -> FastAPI POST /chat (Pydantic validation, rate limit, cache)
-  -> Vanna Agent.send_message(question)
-  -> Extract SQL + validate_sql() (SELECT-only + safety filters)
-  -> (Vanna tools) RunSqlTool executes on clinic.db
-  -> (Optional) VisualizeDataTool returns Plotly figure
-  -> JSON response (message + sql + rows/cols + chart)
-```
+If Ollama is not installed:
 
-## Prerequisites
-
-- Python 3.11+
-- pip
-- (Optional) Ollama if using local LLMs
-
-## Setup instructions
-
-1. Create and activate a virtual environment (recommended).
-
-2. Install dependencies:
+1. Download Ollama from [https://ollama.com](https://ollama.com)
+2. Pull the model:
 
 ```bash
-pip install -r requirements.txt
+ollama pull mistral
 ```
 
-3. Create the database:
+3. Start Ollama (it runs in the background), either by opening the Ollama app or:
 
 ```bash
-python setup_database.py
+ollama serve
 ```
 
-4. Seed agent memory (17 known-good Q→SQL pairs):
+Create `.env` using this exact setup:
 
-```bash
-python seed_memory.py
+```env
+LLM_PROVIDER=ollama
+OLLAMA_MODEL=mistral
 ```
 
-## LLM provider configuration
+## Required One-Command Run
 
-Create a `.env` file (or export env vars) based on `.env.example`.
-
-- **Gemini (recommended)**: set `LLM_PROVIDER=gemini` and `GOOGLE_API_KEY=...`
-  - Key: `https://aistudio.google.com/apikey`
-- **Groq**: set `LLM_PROVIDER=groq` and `GROQ_API_KEY=...`
-  - Console: `https://console.groq.com`
-- **Ollama (local)**: set `LLM_PROVIDER=ollama` and optionally `OLLAMA_MODEL=mistral`
-  - Install: `https://ollama.com`
-  - Example: `ollama pull mistral`
-
-Optional model overrides:
-- `GEMINI_MODEL` (default: `gemini-2.0-flash`)
-- `GROQ_MODEL` (default: `llama-3.1-70b-versatile`)
-- `OLLAMA_MODEL` (default: `llama3`)
-
-## Running the server
-
-```bash
-uvicorn main:app --port 8000 --reload
-```
-
-Open API docs:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
-
-## Frontend (Streamlit)
-
-Start the API server first:
-
-```bash
-py -3.9 -m uvicorn main:app --port 8000
-```
-
-Then in a second terminal, start the Streamlit frontend:
-
-```bash
-streamlit run app.py
-```
-
-Open your browser at `http://localhost:8501`
-
-Features:
-- Chat interface — type questions in plain English
-- View generated SQL for every query
-- Interactive data tables with CSV download
-- Plotly charts for visualization queries
-- Sidebar with example questions to click
-- API health status indicator
-- Conversation history
-
-## API documentation (example)
-
-### Request
-
-`POST /chat`
-
-```json
-{ "question": "How many patients do we have?" }
-```
-
-### Response (example shape)
-
-```json
-{
-  "message": "There are 200 patients.",
-  "sql_query": "SELECT COUNT(*) AS total_patients FROM patients",
-  "columns": ["total_patients"],
-  "rows": [[200]],
-  "row_count": 1,
-  "chart": null,
-  "chart_type": null,
-  "cached": false,
-  "duration_ms": 312.4
-}
-```
-
-## Testing with curl examples
-
-Health:
-
-```bash
-curl http://localhost:8000/health
-```
-
-Chat:
-
-```bash
-curl -X POST http://localhost:8000/chat -H "Content-Type: application/json" -d "{\"question\":\"How many patients do we have?\"}"
-```
-
-## Running the 20 test questions
-
-After the server is running, send the 20 questions listed in the assignment to `POST /chat` and record:
-- generated SQL
-- whether it was correct/safe
-- short result summary
-
-Fill them into `RESULTS.md`.
-
-## Docker deployment
-
-This repository includes a `Dockerfile` (build/run is optional for this assignment run-through).
-
-```bash
-docker build -t nl2sql-clinic .
-docker run -p 8000:8000 --env-file .env nl2sql-clinic
-```
-
-## Required one-command run
+Assignment command:
 
 ```bash
 pip install -r requirements.txt && python setup_database.py && python seed_memory.py && uvicorn main:app --port 8000
 ```
 
-## Troubleshooting
+Windows equivalent:
 
-- If `8000` is occupied on Windows, free it and retry:
-  - `Get-NetTCPConnection -LocalPort 8000 | Select-Object -First 1 | % { Stop-Process -Id $_.OwningProcess -Force }`
-- If Groq auth fails, switch to Ollama locally:
-  - `LLM_PROVIDER=ollama`
-  - `OLLAMA_MODEL=mistral`
+```bash
+pip install -r requirements.txt && py -3.9 setup_database.py && py -3.9 seed_memory.py && py -3.9 -m uvicorn main:app --port 8000
+```
+
+If port `8000` is blocked, use `8002`:
+
+```bash
+py -3.9 -m uvicorn main:app --port 8002
+```
+
+## Run Full System
+
+### Terminal 1 — Start API backend
+
+Make sure Ollama is running, then:
+
+```bash
+py -3.9 -m uvicorn main:app --port 8000 --reload
+```
+
+Expected output includes:
+
+```text
+INFO: Uvicorn running on http://127.0.0.1:8000
+```
+
+### Terminal 2 — Start Streamlit frontend
+
+In the same project folder:
+
+```bash
+streamlit run app.py
+```
+
+Browser opens at:
+
+`http://localhost:8501`
+
+## Test Frontend
+
+1. Sidebar shows **Connected** in green
+2. Click any example question button in sidebar
+3. Question appears in chat input
+4. Press Enter
+5. Verify AI message, SQL expander, data table, optional chart
+6. Try: `Show revenue by doctor` (should produce a chart)
+
+## Test API Directly (Optional)
+
+```bash
+curl -X POST http://127.0.0.1:8000/chat -H "Content-Type: application/json" -d "{\"question\":\"How many patients do we have?\"}"
+```
+
+Expected JSON keys:
+`message`, `sql_query`, `columns`, `rows`, `row_count`
+
+## Test Health
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+Expected:
+
+```json
+{"status":"ok","database":"connected","agent_memory_items":123}
+```
 
