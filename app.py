@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import requests
 import streamlit as st
 
-API_URL = "http://127.0.0.1:8000"
+API_URL = "http://127.0.0.1:8002"
 
 st.set_page_config(
     page_title="Clinic Analytics — NL2SQL",
