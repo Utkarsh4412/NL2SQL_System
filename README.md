@@ -4,6 +4,15 @@ An AI-powered Natural Language to SQL system for a clinic dataset.
 
 **LLM Provider: Ollama (Mistral)**
 
+## Architecture Overview
+
+1. User asks a question in Streamlit UI
+2. Frontend sends request to FastAPI `POST /chat`
+3. Backend uses Vanna 2.0 agent with Ollama (Mistral) to generate SQL
+4. SQL is validated for safety (SELECT-only, dangerous patterns blocked)
+5. Valid SQL executes on `clinic.db` (SQLite)
+6. API returns structured JSON (`message`, `sql_query`, `columns`, `rows`, `row_count`, optional chart)
+
 ## Reviewer Setup (Ollama Required)
 
 If Ollama is not installed:
@@ -89,6 +98,20 @@ Browser opens at:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/chat -H "Content-Type: application/json" -d "{\"question\":\"How many patients do we have?\"}"
+```
+
+Example response:
+
+```json
+{
+  "message": "Here are the results.",
+  "sql_query": "SELECT COUNT(*) AS total_patients FROM patients",
+  "columns": ["total_patients"],
+  "rows": [[200]],
+  "row_count": 1,
+  "chart": null,
+  "chart_type": null
+}
 ```
 
 Expected JSON keys:
