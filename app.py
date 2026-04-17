@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime
 
 import pandas as pd
@@ -6,7 +7,8 @@ import plotly.graph_objects as go
 import requests
 import streamlit as st
 
-API_URL = "http://127.0.0.1:8002"
+DEFAULT_API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000").strip() or "http://127.0.0.1:8000"
+FALLBACK_API_URL = "http://127.0.0.1:8002"
 
 st.set_page_config(
     page_title="Clinic Analytics — NL2SQL",
@@ -20,23 +22,56 @@ if "messages" not in st.session_state:
 if "prefill" not in st.session_state:
     st.session_state["prefill"] = None
 if "api_url" not in st.session_state:
-    st.session_state["api_url"] = API_URL
+    st.session_state["api_url"] = DEFAULT_API_URL
 if "health" not in st.session_state:
     st.session_state["health"] = None
+if "last_health_url" not in st.session_state:
+    st.session_state["last_health_url"] = None
+
+
+def fetch_health(base_url: str) -> dict:
+    try:
+        r = requests.get(f"{base_url}/health", timeout=8)
+        if r.status_code == 200:
+            return r.json()
+    except Exception:
+        pass
+    return {"status": "error"}
+
+
+def refresh_health(force: bool = False) -> None:
+    current_url = st.session_state["api_url"]
+    if not force and st.session_state["last_health_url"] == current_url and st.session_state["health"] is not None:
+        return
+
+    primary = fetch_health(current_url)
+    if primary.get("status") == "ok":
+        st.session_state["health"] = primary
+        st.session_state["last_health_url"] = current_url
+        return
+
+    # Reviewer-friendly fallback if backend is running on the alternate common port.
+    if current_url != FALLBACK_API_URL:
+        fallback = fetch_health(FALLBACK_API_URL)
+        if fallback.get("status") == "ok":
+            st.session_state["api_url"] = FALLBACK_API_URL
+            st.session_state["health"] = fallback
+            st.session_state["last_health_url"] = FALLBACK_API_URL
+            return
+
+    st.session_state["health"] = primary
+    st.session_state["last_health_url"] = current_url
 
 st.sidebar.header("API Settings")
 api_url = st.sidebar.text_input("API URL", value=st.session_state["api_url"])
-st.session_state["api_url"] = api_url.strip() or API_URL
+normalized_api_url = api_url.strip() or DEFAULT_API_URL
+api_url_changed = normalized_api_url != st.session_state["api_url"]
+st.session_state["api_url"] = normalized_api_url
+
+refresh_health(force=api_url_changed)
 
 if st.sidebar.button("Check connection"):
-    try:
-        r = requests.get(f"{st.session_state['api_url']}/health", timeout=8)
-        if r.status_code == 200:
-            st.session_state["health"] = r.json()
-        else:
-            st.session_state["health"] = {"status": "error"}
-    except Exception:
-        st.session_state["health"] = {"status": "error"}
+    refresh_health(force=True)
 
 health = st.session_state.get("health")
 if health and health.get("status") == "ok":
