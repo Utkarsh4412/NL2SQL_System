@@ -48,13 +48,15 @@ pip install -r requirements.txt && python setup_database.py && python seed_memor
 Windows equivalent:
 
 ```bash
-pip install -r requirements.txt && py -3.9 setup_database.py && py -3.9 seed_memory.py && py -3.9 -m uvicorn main:app --port 8000
+pip install -r requirements.txt; py -3.9 setup_database.py; py -3.9 seed_memory.py; py -3.9 -m uvicorn main:app --port 8000
 ```
+
+Note: In Windows PowerShell 5.1, use `;` between commands (as shown above).
 
 If port `8000` is blocked, use `8002`:
 
 ```bash
-py -3.9 -m uvicorn main:app --port 8002
+py -3.9 -m uvicorn main:app --port 8002 --reload
 ```
 
 ## Run Full System
